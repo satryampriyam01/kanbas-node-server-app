@@ -10,6 +10,12 @@ import ModuleRoutes from "./Kanbas/Modules/routes.js";
 import AssignmentRoutes from "./Kanbas/Assignments/routes.js";
 
 const app = express();
+console.log({
+  NODE_ENV: process.env.NODE_ENV,
+  SESSION_SECRET: process.env.SESSION_SECRET,
+  NETLIFY_URL: process.env.NETLIFY_URL,
+  NODE_SERVER_DOMAIN: process.env.NODE_SERVER_DOMAIN,
+});
 app.use(
   cors({
     credentials: true,
