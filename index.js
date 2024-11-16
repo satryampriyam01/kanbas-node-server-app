@@ -28,7 +28,8 @@ if (process.env.NODE_ENV !== "development") {
     sameSite: "none",
     secure: true,
     domain: process.env.NODE_SERVER_DOMAIN,
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    maxAge: 24 * 60 * 60 * 1000 ,
+    httpOnly:true
   };
 }
 
