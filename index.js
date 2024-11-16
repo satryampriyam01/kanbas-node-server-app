@@ -28,6 +28,7 @@ if (process.env.NODE_ENV !== "development") {
     sameSite: "none",
     secure: true,
     domain: process.env.NODE_SERVER_DOMAIN,
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
   };
 }
 
@@ -38,7 +39,6 @@ console.log({
   NODE_SERVER_DOMAIN: process.env.NODE_SERVER_DOMAIN,
 });
 
-console.log("All Environment Variables:", process.env);
 
 app.use(session(sessionOptions));
 app.use(express.json());
