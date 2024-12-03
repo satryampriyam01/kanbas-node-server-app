@@ -10,6 +10,6 @@ export default function ModuleRoutes(app) {
     const moduleUpdates = req.body;
     const status = await modulesDao.updateModule(moduleId, moduleUpdates);
     //console.log(status);
-    res.sendStatus(204);
+    res.send(status);
   });
 }
