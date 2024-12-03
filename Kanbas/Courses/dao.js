@@ -13,7 +13,7 @@ export function findCoursesForEnrolledUser(userId) {
   return enrolledCourses;
 }
 export function createCourse(course) {
- // delete course._id;
+  delete course._id;
   return model.create(course);
 }
 // export function deleteCourse(courseId) {
