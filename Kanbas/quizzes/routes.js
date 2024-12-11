@@ -280,4 +280,78 @@ export default function QuizRoutes(app) {
       res.status(500).send("Internal Server Error");
     }
   });
+
+
+  app.post("/api/quizzes/:qid/attempts", async (req, res) => {
+    const { qid } = req.params;
+    const { score, questions } = req.body;
+    const currentUser = req.session["currentUser"];
+
+    //console.log(currentUser);
+    //console.log('Session:', req.session);
+  
+    const userId = currentUser && currentUser._id; // Assumes user is authenticated and user info is in req.session
+  
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ error: "Unauthorized: User not authenticated" });
+    }
+  
+    // Validate quiz ID
+    if (!mongoose.Types.ObjectId.isValid(qid)) {
+      return res.status(400).json({ error: `Invalid quiz ID: ${qid}` });
+    }
+  
+    try {
+      const updatedQuiz = await quizzesDao.incrementUserAttemptAndSetScore(qid, userId, score, questions);
+      res.status(200).json({
+        message: "Attempt recorded successfully",
+        quizId: qid,
+        userId: userId,
+        updatedQuiz: updatedQuiz,
+      });
+    } catch (error) {
+      console.error("Error recording attempt:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  /**
+ * GET /api/quizzes/:qid/attempts/latest
+ * Retrieves the latest attempt for a quiz by the authenticated user.
+ */
+app.get("/api/quizzes/:qid/attempts/latest", async (req, res) => {
+    const { qid } = req.params;
+    const currentUser = req.session["currentUser"];
+
+    //console.log('Session:', req.session)
+    //console.log(currentUser);
+  
+    const userId = currentUser && currentUser._id; // Assumes user is authenticated and user info is in req.session
+  
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ error: "Unauthorized: User not authenticated" });
+    }
+  
+    // Validate quiz ID
+    if (!mongoose.Types.ObjectId.isValid(qid)) {
+      return res.status(400).json({ error: `Invalid quiz ID: ${qid}` });
+    }
+  
+    try {
+        console.log('Fetching latest attempt for quiz:', qid, 'by user:', userId);
+      const latestAttempt = await quizzesDao.findLatestAttemptByQuizIdAndUserId(qid, userId);
+      if (!latestAttempt) {
+        return res.status(404).json({ error: "No attempts found for this quiz" });
+      }
+      res.json(latestAttempt);
+    } catch (error) {
+      console.error("Error fetching latest attempt:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
 }

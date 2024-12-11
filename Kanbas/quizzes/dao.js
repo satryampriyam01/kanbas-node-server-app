@@ -115,3 +115,47 @@ export async function publish(quizId) {
 export async function unpublish(quizId) {
   QuizModel.updateOne({ _id: quizId }, { published: false });
 }
+
+
+
+
+/**
+ * Increments the attempt count and sets the last score for a user on a specific quiz.
+ * @param {string} quizId - The ID of the quiz.
+ * @param {string} userId - The ID of the user.
+ * @param {number} score - The score of the attempt.
+ * @param {Array} questions - The questions and answers of the attempt.
+ * @returns {Promise<Object>} - The updated quiz.
+ */
+export async function incrementUserAttemptAndSetScore(quizId, userId, score, questions) {
+    return QuizModel.findOneAndUpdate(
+      { _id: quizId, "attempts.user": userId },
+      { $inc: { "attempts.$.count": 1 }, $set: { "attempts.$.lastScore": score, "attempts.$.questions": questions } },
+      { new: true }
+    )
+      .exec()
+      .then(async (updatedQuiz) => {
+        if (!updatedQuiz) {
+          // If the user hasn't attempted yet, add a new record
+          return QuizModel.findByIdAndUpdate(
+            quizId,
+            { $push: { attempts: { user: userId, count: 1, lastScore: score, questions: questions } } },
+            { new: true }
+          ).exec();
+        }
+        return updatedQuiz;
+      });
+  }
+
+
+
+
+  /**
+ * Finds the latest attempt by quiz ID and user ID.
+ * @param {string} quizId - The ID of the quiz.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<Object>} - The latest attempt.
+ */
+export const findLatestAttemptByQuizIdAndUserId = async (quizId, userId) => {
+    return await QuizModel.findOne({ _id: quizId, "attempts.user": userId }).sort({ "attempts.createdAt": -1 });
+  };
