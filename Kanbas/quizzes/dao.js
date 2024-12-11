@@ -1,60 +1,117 @@
-import Database from "../Database/index.js";
-import model from "./model.js";
+import QuizModel from "./model.js";
+
+/**
+ * Retrieves all quizzes for a specific course.
+ * @param {string} courseId - The ID of the course.
+ * @returns {Promise<Array>} - List of quizzes belonging to the course.
+ */
 export function findQuizzesForCourse(courseId) {
-    //const {assignments} = Database
-    //return assignments.filter((assignment) => assignment.courseId === courseId);
-    return model.find({ course : courseId });
+  console.log("Finding quizzes for course", courseId);
+  return QuizModel.find({ course: courseId });
 }
-export function createQuiz(quiz){
-    delete quiz._id
-    return model.create(quiz);
-    //const {assignments} = Database;
-    //const newAssignment = {...assignment, _id : Date.now().toString()};
-    //Database.assignments = [...Database.assignments,newAssignment]
-    //return newAssignment
+
+/**
+ * Retrieves quiz by id.
+ */
+export function findQuizById(quizId) {
+  return QuizModel.findById(quizId);
 }
-export function deleteQuiz(quizId){
-    //const {assignments} = Database
-    //Database.assignments = Database.assignments.filter((assignment) => assignment._id !== assignmentId )
-    return model.deleteOne({ _id:quizId });
+
+/**
+ * Creates a new quiz and saves it to the database.
+ * @param {Object} quiz - The quiz data.
+ * @returns {Promise<Object>} - The newly created quiz.
+ */
+export function createQuiz(quiz) {
+  delete quiz._id;
+  const newQuiz = {
+    ...quiz,
+    points:
+      quiz.questions &&
+      quiz.questions.reduce(
+        (sumQuestions, question) => sumQuestions + (question.points || 0),
+        0
+      ),
+  };
+  return QuizModel.create(newQuiz);
 }
-export function updateQuiz(quizId, quizUpdates){
-    //const {assignments} = Database
-    //const assignment = assignments.find((assignment) => assignment._id === assignmentId);
-    //Object.assign(assignment,assignmentUpdates);
-    //return assignment
-    return model.updateOne({ _id: quizId }, quizUpdates);
+
+/**
+ * Deletes a quiz by its ID.
+ * @param {string} quizId - The ID of the quiz to delete.
+ * @returns {Promise<Object>} - Result of the delete operation.
+ */
+export function deleteQuiz(quizId) {
+  return QuizModel.deleteOne({ _id: quizId });
 }
+
+/**
+ * Updates an existing quiz with new data.
+ * @param {string} quizId - The ID of the quiz to update.
+ * @param {Object} quizUpdates - The updated quiz data.
+ * @returns {Promise<Object>} - The result of the update operation.
+ */
+export function updateQuiz(quizId, quizUpdates) {
+  return QuizModel.updateOne({ _id: quizId }, { $set: quizUpdates });
+}
+
+/**
+ * Retrieves all quizzes.
+ * @returns {Promise<Array>} - List of all quizzes in the database.
+ */
 export function findAllQuizzes() {
-    return model.find();
+  return QuizModel.find();
 }
 
-export async function publish(quizId) {
-    model.updateOne({ _id: quizId }, {published: true});
-}
-export async function unpublish(quizId) {
-    model.updateOne({ _id: quizId }, {published: false});
-}
-
-export async function incrementUserAttempt(quizId, userId) {
-    const result = await QuizModel.updateOne(
-      { _id: quizId, "attempts.user": userId },
-      {
-        $inc: { "attempts.$.count": 1 },
-        $setOnInsert: { "attempts.$.user": userId }
-      },
-      { upsert: true, new: true }
-    ).exec();
-  
-    if (result.nModified === 0) {
-      // If no document was modified, it means the user hasn't attempted yet, so we add a new record
-      return QuizModel.findByIdAndUpdate(
-        quizId,
-        { $push: { attempts: { user: userId, count: 1 } } },
-        { new: true }
-      ).exec();
-    }
-  
-    return QuizModel.findById(quizId).exec();
+/**
+ * Retrieves the number of attempts a user has made for a specific quiz.
+ * @param {string} quizId - The ID of the quiz.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<number>} - The number of attempts.
+ */
+export async function getUserAttemptCount(quizId, userId) {
+  const quiz = await QuizModel.findById(quizId).exec();
+  if (!quiz) {
+    throw new Error("Quiz not found");
   }
+  const attemptRecord = quiz.attempts.find(
+    (attempt) => attempt.user.toString() === userId
+  );
+  return attemptRecord ? attemptRecord.count : 0;
+}
 
+/**
+ * Increments the attempt count for a user on a specific quiz.
+ * @param {string} quizId - The ID of the quiz.
+ * @param {string} userId - The ID of the user.
+ * @returns {Promise<Object>} - The updated quiz.
+ */
+export async function incrementUserAttempt(quizId, userId) {
+  return QuizModel.findOneAndUpdate(
+    { _id: quizId, "attempts.user": userId },
+    { $inc: { "attempts.$.count": 1 } },
+    { new: true }
+  )
+    .exec()
+    .then(async (updatedQuiz) => {
+      if (!updatedQuiz) {
+        // If the user hasn't attempted yet, add a new record
+        return QuizModel.findByIdAndUpdate(
+          quizId,
+          { $push: { attempts: { user: userId, count: 1 } } },
+          { new: true }
+        ).exec();
+      }
+      return updatedQuiz;
+    });
+}
+
+/** Sets the publish field in a quiz to true */
+export async function publish(quizId) {
+  QuizModel.updateOne({ _id: quizId }, { published: true });
+}
+
+/** Sets the publish field in a quiz to false */
+export async function unpublish(quizId) {
+  QuizModel.updateOne({ _id: quizId }, { published: false });
+}

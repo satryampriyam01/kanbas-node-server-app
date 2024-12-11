@@ -16,9 +16,9 @@ export default function QuizRoutes(app) {
     const { cid } = req.params;
 
     // Validate course ID
-    if (!mongoose.Types.ObjectId.isValid(cid)) {
-      return res.status(400).json({ error: `Invalid course ID: ${cid}` });
-    }
+    // if (!mongoose.Types.ObjectId.isValid(cid)) {
+    //   return res.status(400).json({ error: `Invalid course ID: ${cid}` });
+    // }
 
     try {
       const quizzes = await quizzesDao.findQuizzesForCourse(cid);
@@ -31,6 +31,28 @@ export default function QuizRoutes(app) {
   });
 
   /**
+   * GET /api/courses/:cid/quizzes
+   * Retrieves specific quiz
+   */
+  app.get("/api/courses/:cid/quizzes/:qid", async (req, res) => {
+    const { qid } = req.params;
+
+    // Validate quiz ID
+    if (!mongoose.Types.ObjectId.isValid(qid)) {
+      return res.status(400).json({ error: `Invalid quiz ID: ${qid}` });
+    }
+
+    try {
+      const quizzes = await quizzesDao.findQuizById(qid);
+      console.log("Quiz:", quizzes);
+      res.json(quizzes);
+    } catch (error) {
+      console.error("Error fetching quiz:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  /**
    * POST /api/courses/:cid/quizzes
    * Creates a new quiz for a specific course.
    */
@@ -38,9 +60,9 @@ export default function QuizRoutes(app) {
     const { cid } = req.params;
 
     // Validate course ID
-    if (!mongoose.Types.ObjectId.isValid(cid)) {
-      return res.status(400).json({ error: `Invalid course ID: ${cid}` });
-    }
+    // if (!mongoose.Types.ObjectId.isValid(cid)) {
+    //   return res.status(400).json({ error: `Invalid course ID: ${cid}` });
+    // }
 
     const newQuizData = {
       ...req.body,
@@ -117,7 +139,9 @@ export default function QuizRoutes(app) {
 
     console.log("are we here?");
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized: User not authenticated" });
+      return res
+        .status(401)
+        .json({ error: "Unauthorized: User not authenticated" });
     }
 
     // Validate quiz ID
@@ -126,7 +150,10 @@ export default function QuizRoutes(app) {
     }
 
     try {
-      const updatedQuiz = await quizzesDao.incrementUserAttempt(qid, currentUser._id);
+      const updatedQuiz = await quizzesDao.incrementUserAttempt(
+        qid,
+        currentUser._id
+      );
       res.status(200).json({
         message: "Attempt recorded successfully",
         quizId: qid,
@@ -150,7 +177,9 @@ export default function QuizRoutes(app) {
     const userId = currentUser && currentUser._id; // Assumes user is authenticated and user info is in req.user
 
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized: User not authenticated" });
+      return res
+        .status(401)
+        .json({ error: "Unauthorized: User not authenticated" });
     }
 
     // Validate quiz ID
@@ -159,7 +188,10 @@ export default function QuizRoutes(app) {
     }
 
     try {
-      const attemptCount = await quizzesDao.getUserAttemptCount(qid, currentUser._id);
+      const attemptCount = await quizzesDao.getUserAttemptCount(
+        qid,
+        currentUser._id
+      );
       res.status(200).json({
         quizId: qid,
         userId: currentUser._id,
@@ -172,7 +204,7 @@ export default function QuizRoutes(app) {
   });
 
   app.put("/api/courses/:cid/quizzes/:qid/publish", async (req, res) => {
-    const {qid} = req.params;
+    const { qid } = req.params;
     try {
       await quizzesDao.publish(qid);
       res.status(200);
@@ -183,12 +215,68 @@ export default function QuizRoutes(app) {
   });
 
   app.put("/api/courses/:cid/quizzes/:qid/unpublish", async (req, res) => {
-    const {qid} = req.params;
+    const { qid } = req.params;
     try {
       await quizzesDao.unpublish(qid);
       res.status(200);
     } catch (error) {
       console.error("Error publishing quiz:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  /**
+   * PUT /api/courses/:cid/quizzes/:qid/score
+   * Updates the score for the authenticated user on a specific quiz.
+   */
+  app.put("/api/courses/:cid/quizzes/:qid/score", async (req, res) => {
+    const { cid, qid } = req.params;
+    const currentUser = req.session["currentUser"];
+
+    const userId = currentUser && currentUser._id;
+
+    // Check if the user is authenticated
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ error: "Unauthorized: User not authenticated" });
+    }
+
+    // Validate course ID
+    // if (!mongoose.Types.ObjectId.isValid(cid)) {
+    //   return res.status(400).json({ error: `Invalid course ID: ${cid}` });
+    // }
+
+    // Validate quiz ID
+    if (!mongoose.Types.ObjectId.isValid(qid)) {
+      return res.status(400).json({ error: `Invalid quiz ID: ${qid}` });
+    }
+
+    // Extract and validate the new score from the request body
+    const { score } = req.body;
+    if (typeof score !== "number" || score < 0) {
+      return res.status(400).json({
+        error: "Invalid score provided. Score must be a non-negative number.",
+      });
+    }
+
+    try {
+      // Update the user's score in the quiz
+      const updatedQuiz = await quizzesDao.updateUserScore(qid, userId, score);
+
+      if (updatedQuiz) {
+        res.status(200).json({
+          message: "Score updated successfully",
+          quizId: qid,
+          userId: userId,
+          newScore: score,
+          updatedQuiz: updatedQuiz,
+        });
+      } else {
+        res.status(404).json({ message: "Quiz not found" });
+      }
+    } catch (error) {
+      console.error("Error updating score:", error);
       res.status(500).send("Internal Server Error");
     }
   });

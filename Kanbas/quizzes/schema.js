@@ -1,45 +1,61 @@
+// schema.js
+
 import mongoose from "mongoose";
 
-const choiceSchema = new mongoose.Schema({
-    correct: { type: Boolean, default: false },
-    answer: String,
-  });
+// Define a schema for tracking user attempts
+const attemptSchema = new mongoose.Schema(
+  {
+    user: { type: String, ref: "User", required: true },
+    count: { type: Number, default: 0 },
+    lastScore: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
 
-const attemptSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User"},
-    count: Number,
-})
+const choiceSchema = new mongoose.Schema({
+  correct: { type: Boolean, default: false },
+  answer: { type: String },
+});
 
 const questionSchema = new mongoose.Schema({
-    title : String,
-    type : {type : String, default : "Multiple_Choice" },
-    points : Number,
-    question : String,
-    choices : [choiceSchema]
-})
+  title: { type: String },
+  type: { type: String, default: "Multiple Choice" },
+  points: { type: Number, default: 0 },
+  question: { type: String, required: true },
+  choices: [choiceSchema],
+});
+
+// Define the Quiz schema
 const quizSchema = new mongoose.Schema(
   {
-    Title: String,
-    Description: String,
-    course: { type: mongoose.Schema.Types.ObjectId, ref: "CourseModel" },
-    Points: Number,
-    AssignMentGroup : {type : String, default : "Quiz"},
-    DueDate :  Date,
-    AvaliableFrom : Date,
-    AvailableUtil : Date,
-    Published : {type: Boolean, default : false},
-    Type : {type : String, default : "Graded"},
-    AccessCode : {type : String, default : ""},
-    AssignmentGroup: String,
-    ShuffleAsnwers: {type : Boolean, default : true},
-    TimeLimit: Number,
-    MultipleAttempts: {type : Boolean, default : false},
-    LockQuestionsAfterAnswering: {type : Boolean, default : false},
-    OneQuestionAtATime: {type : Boolean, default : True},
-    ShowAnswersAfterCompletion : {type : Boolean, default : True},
-    Webmcam : Boolean,
-    HowManyAttempts : {type : Number, default : 1},
+    title: { type: String, required: true },
+    course: {
+      type: String,
+      ref: "Course",
+      required: true,
+    },
+    description: { type: String },
+    points: { type: Number },
+    dueDate: { type: Date },
+    published: { type: Boolean, default: false },
+    allowMultipleAttempts: { type: Boolean, default: false },
+    assignTo: { type: String, default: "Everyone" },
+    assignmentGroup: { type: String, default: "Quizzes" },
+    quizType: { type: String, default: "Graded Quiz" },
+    shuffleAnswers: { type: Boolean, default: true },
+    timeLimit: { type: Number, default: 20 },
+    availableFrom: { type: Date },
+    availableUntil: { type: Date },
+    attempts: [attemptSchema],
+    questions: [questionSchema],
+    accessCode: { type: String },
+    lockQuestions: { type: Boolean, default: false },
+    oneQuestionAtATime: { type: Boolean, default: true },
+    showCorrectAnswers: { type: String, default: "Immediately" },
+    webcam: { type: Boolean, default: false },
+    maxAttempts: { type: Number, default: 1 },
   },
   { collection: "quizzes" }
 );
-export default schema;
+
+export default quizSchema;
